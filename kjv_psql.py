@@ -20,6 +20,7 @@
 
 import os
 import errno
+
 import hashlib
 
 # Third Party Packages
@@ -27,7 +28,7 @@ import psycopg2
 
 try:
 	print("Connecting ...")
-	conn = psycopg2.connect(host="localhost, 127.0.0.1", user="postgres", password="postgres")
+	conn = psycopg2.connect(os.getenv('DATABASE_URL'))
 	cur = conn.cursor()
 	print("PostgreSQL version:")
 	cur.execute('SELECT version()')
@@ -116,17 +117,17 @@ files = [
 	'kjv-revelation.csv'
 ]
 
-conn = psycopg2.connect(host="localhost, 127.0.0.1", user="postgres", password="postgres")
+conn = psycopg2.connect(os.getenv('DATABASE_URL'))
 
 print()
-print("Creating database: \'bible\'")
+print("Updating database: \'neondb\'")
 
-sql = """CREATE DATABASE bible;"""
+# sql = """CREATE DATABASE bible;"""
 conn.autocommit = True
 cur = conn.cursor()
-cur.execute(sql)
+# cur.execute(sql)
 
-sql = """SELECT count(*) FROM pg_catalog.pg_database WHERE datname = 'bible' ;"""
+sql = """SELECT count(*) FROM pg_catalog.pg_database WHERE datname = 'neondb' ;"""
 cur.execute(sql)
 if bool(cur.rowcount) == True:
 	print("Database created successfully.")
@@ -138,7 +139,7 @@ else:
 cur.close()
 conn.close()
 
-conn = psycopg2.connect(host="localhost, 127.0.0.1", database="bible", user="postgres", password="postgres")
+conn = psycopg2.connect(os.getenv('DATABASE_URL'))
 cur = conn.cursor()
 
 print("Creating table \'kjv\'...")
@@ -151,6 +152,7 @@ sql = """CREATE TABLE kjv (
 	chapter text NOT NULL,
 	verse text NOT NULL,
 	vtext text NOT NULL,
+	vscript text NOT NULL,
 	hashed text NOT NULL);"""
 cur.execute(sql)
 conn.commit()
@@ -170,10 +172,11 @@ for file in files:
 			bible_chapter = str(row[2])
 			bible_verse = str(row[3])
 			bible_text = str(row[4])
-			hash_row = ''.join([bible_testament, bible_book, bible_chapter, bible_verse, bible_text])
+			bible_script = str(row[5])
+			hash_row = ''.join([bible_testament, bible_book, bible_chapter, bible_verse, bible_text, bible_script])
 			hashed = hashlib.sha256(hash_row.encode('utf-8')).hexdigest()
-			sql = """INSERT INTO kjv VALUES(%s, %s, %s, %s, %s, %s, %s);"""
-			cur.execute(sql, (count, bible_testament, bible_book, bible_chapter, bible_verse, bible_text, hashed))
+			sql = """INSERT INTO kjv VALUES(%s, %s, %s, %s, %s, %s, %s, %s);"""
+			cur.execute(sql, (count, bible_testament, bible_book, bible_chapter, bible_verse, bible_text, bible_script, hashed))
 			count+=1
 
 	except (Exception, psycopg2.DatabaseError) as error:
